@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MINESWEEPER FINAL</title>
+<style>
+  :root{
+    --bg1:#050814;
+    --bg2:#0a1230;
+    --panel:#0c1330;
+    --panel-edge:#233467;
+    --ink:#eaf3ff;
+    --muted:#7f93c4;
+    --cyan:#3fe6ff;
+    --cyan-dim:#1b7f94;
+    --pink:#ff4fc3;
+    --amber:#ffcf5c;
+    --cell:#101c40;
+    --cell-hi:#1c2e5e;
+    --cell-shadow:#040816;
+    --revealed:#060b1e;
+    --flag:#ff4fc3;
+    --mine:#ff5470;
+    --win:#3fffb0;
+    --serif: 'Iowan Old Style','Palatino Linotype',Georgia,'Times New Roman',serif;
+    --mono: 'SF Mono','Fira Code','Roboto Mono',ui-monospace,monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(63,230,255,0.14) 0%, transparent 55%),
+      radial-gradient(900px 700px at 105% 105%, rgba(255,79,195,0.14) 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    font-family: var(--sans);
+    color: var(--ink);
+    padding: 28px 14px;
+  }
+  .stage{
+    width: 100%;
+    max-width: 480px;
+  }
+  .card{
+    background: linear-gradient(180deg, #0e1638, var(--panel));
+    border: 1px solid var(--panel-edge);
+    border-radius: 22px;
+    padding: 28px 26px 24px;
+    box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7), 0 0 40px -12px rgba(63,230,255,0.15), 0 1px 0 rgba(255,255,255,0.04) inset;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:-70px; right:-70px;
+    width:200px; height:200px;
+    background: radial-gradient(circle, rgba(63,230,255,0.22), transparent 70%);
+    pointer-events:none;
+  }
+  header{
+    text-align:center;
+    margin-bottom: 18px;
+  }
+  .eyebrow{
+    font-family: var(--mono);
+    text-transform: lowercase;
+    color: var(--cyan);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    margin: 0 0 6px;
+    opacity: 0.85;
+  }
+  h1{
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--ink);
+    text-shadow: 0 0 18px rgba(63,230,255,0.35);
+  }
+  .sub{
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .hud{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 10px;
+    margin: 18px 0 14px;
+  }
+  .counter{
+    font-family: var(--mono);
+    font-size: 19px;
+    background: #000;
+    color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    border-radius: 8px;
+    padding: 6px 14px;
+    min-width: 56px;
+    text-align:center;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(63,230,255,0.7);
+  }
+  .face-btn{
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--panel-edge);
+    background: linear-gradient(180deg, var(--cell-hi), var(--cell));
+    box-shadow: 0 3px 0 var(--cell-shadow), 0 6px 14px rgba(0,0,0,0.4);
+    font-size: 20px;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition: transform 0.08s ease;
+  }
+  .face-btn:active{ transform: translateY(2px); box-shadow: 0 1px 0 var(--cell-shadow); }
+  .board{
+    display: grid;
+    gap: 5px;
+    background: #000;
+    padding: 9px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-edge);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.6);
+  }
+  .cell{
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, var(--cell-hi), var(--cell));
+    box-shadow: 0 3px 0 var(--cell-shadow), inset 0 1px 0 rgba(255,255,255,0.08);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: clamp(11px, 3.4vw, 16px);
+    font-weight: 700;
+    font-family: var(--mono);
+    cursor: pointer;
+    user-select: none;
+    padding: 0;
+    transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+  }
+  .cell:hover:not(.revealed){ background: linear-gradient(180deg, #24386f, var(--cell)); }
+  .cell:active:not(.revealed){ transform: translateY(2px); box-shadow: 0 1px 0 var(--cell-shadow); }
+  .cell.revealed{
+    background: var(--revealed);
+    border: 1px solid rgba(63,230,255,0.15);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+    cursor: default;
+  }
+  .cell.flag::after{ content: "♥"; color: var(--flag); font-size: 90%; filter: drop-shadow(0 0 6px rgba(255,79,195,0.8)); }
+  .cell .n1{color:#5ec9ff; text-shadow:0 0 8px rgba(94,201,255,0.6);}
+  .cell .n2{color:#3fffb0; text-shadow:0 0 8px rgba(63,255,176,0.5);}
+  .cell .n3{color:#ff4fc3; text-shadow:0 0 8px rgba(255,79,195,0.5);}
+  .cell .n4{color:#b98cff; text-shadow:0 0 8px rgba(185,140,255,0.5);}
+  .cell .n5{color:#ffcf5c; text-shadow:0 0 8px rgba(255,207,92,0.5);}
+  .cell .n6{color:#3fe6ff; text-shadow:0 0 8px rgba(63,230,255,0.5);}
+  .cell .n7{color:#eaf3ff;}
+  .cell .n8{color:#7f93c4;}
+  .cell.mine-cell{ background: radial-gradient(circle, rgba(255,84,112,0.35), var(--revealed) 70%); border-color: rgba(255,84,112,0.4); }
+  .cell.mine-cell::after{ content:"✿"; color: var(--mine); filter: drop-shadow(0 0 8px rgba(255,84,112,0.8)); }
+  footer{
+    margin-top: 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap: 10px;
+  }
+  .hint{
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height:1.4;
+  }
+  select, .difficulty{
+    font-family: var(--mono);
+    font-size: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-edge);
+    background: #060b1e;
+    color: var(--cyan);
+    padding: 6px 8px;
+  }
+
+  /* Overlay (win / lose) */
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(2,4,12,0.82);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+    z-index: 50;
+    backdrop-filter: blur(4px);
+  }
+  .overlay.show{ display:flex; }
+  .overlay-card{
+    max-width: 420px;
+    width: 100%;
+    background: linear-gradient(180deg, #0e1638, var(--panel));
+    border: 1px solid var(--panel-edge);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.7), 0 0 60px -15px rgba(63,230,255,0.2);
+    text-align:center;
+    animation: pop .35s cubic-bezier(.2,.9,.25,1);
+  }
+  @keyframes pop{ from{ transform: scale(0.9); opacity:0; } to{ transform: scale(1); opacity:1; } }
+  .overlay-photo{
+    width: 100%;
+    display:block;
+    max-height: 340px;
+    object-fit: cover;
+  }
+  .overlay-body{ padding: 22px 26px 26px; }
+  .overlay-title{
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 23px;
+    margin: 0 0 8px;
+  }
+  .overlay-title.lose{ color: var(--mine); text-shadow: 0 0 16px rgba(255,84,112,0.45); }
+  .overlay-title.win{ color: var(--win); text-shadow: 0 0 16px rgba(63,255,176,0.45); }
+  .overlay-text{
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre-wrap;
+    margin: 0 0 18px;
+    text-align: left;
+  }
+  .overlay-actions{ display:flex; gap:10px; justify-content:center; }
+  .btn{
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  .btn.primary{ background: var(--cyan); color: #05121a; box-shadow: 0 0 16px rgba(63,230,255,0.5); }
+  .btn.ghost{ background: transparent; color: var(--muted); border: 1px solid var(--cell-shadow); }
+
+  @media (prefers-reduced-motion: reduce){
+    .overlay-card{ animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="card">
+    <header>
+      <p class="eyebrow">for my favorite gay girl</p>
+      <h1 id="gameTitle">MINESWEEPER</h1>
+      <p class="sub" id="gameSub">Clear the grid. Avoid the mines.</p>
+    </header>
+
+    <div class="hud">
+      <div class="counter" id="mineCounter">10</div>
+      <button class="face-btn" id="resetBtn" title="Restart">🔁</button>
+      <select id="difficulty">
+        <option value="easy">Easy 8×8</option>
+        <option value="medium" selected>Medium 10×10</option>
+        <option value="hard">Hard 12×12</option>
+      </select>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <footer>
+      <p class="you know how this works">tap to reveal · long-press or right-click to flag</p>
+    </footer>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <img id="overlayPhoto" class="overlay-photo" src="" alt="" style="display:none;">
+    <div class="overlay-body">
+      <h2 class="overlay-title" id="overlayTitle"></h2>
+      <p class="overlay-text" id="overlayText"></p>
+      <div class="overlay-actions">
+        <button class="btn primary" id="playAgainBtn">Play again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EDIT ME — everything you'd want to customize lives here.
+   ============================================================ */
+
+// 1) The photo shown when they LOSE — one per difficulty (grid
+//    size). Each must be a direct link to an image FILE (ending
+//    in .jpg/.png/etc), or a base64 data URL — NOT a link to a
+//    webpage/article.
+//    a) paste a base64 data URL (drag a photo into
+//       https://www.base64-image.de/ to generate one), or
+//    b) point it at a direct image URL, e.g.
+//       "https://example.com/photo.jpg"
+const LOSE_PHOTOS = {
+  easy: "https://hips.hearstapps.com/esq.h-cdn.co/assets/17/07/1487345526-jar-jar-new.jpg?resize=640:*",
+  medium: "https://preview.redd.it/jb-suarez-patawaadd-v0-q4j4cemtqq9h1.jpeg?width=1224&format=pjpg&auto=webp&s=96420989a94833d8d2530be0c8a0e503c316af5f",
+  hard: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-nqjMlaCsiQFgxb8uy2fZdB7G0Dak7453N8IiATZ4qR0MX0YCN9rMfFw&s=10"
+};
+
+// 2) Lose messages — one per difficulty (grid size). Each grid
+//    now shows its own title + message when they hit a mine.
+const LOSE_MESSAGES = {
+  easy: {
+    title: "LOSERRRRR",
+    message: "Mesa thinks you hit a mine!"
+  },
+  medium: {
+    title: "okay i can't say anything idk how to play",
+    message: "ENGKKKK ENGOTTTT"
+  },
+  hard: {
+    title: "womp womp womp....",
+    message: "kain tayo team ryzza"
+  }
+};
+
+// 3) Win messages — one per difficulty (grid size). Each grid
+//    now shows its own title + note when they clear the board.
+const WIN_MESSAGES = {
+  easy: {
+    title: "good game bubby",
+    message: "I know you've been tired recently so, maybe this will keep your mind off of things for a while <3"
+  },
+  medium: {
+    title: "hell yeah",
+    message: "i genuinely don't understand how you play this, but good game!"
+  },
+  hard: {
+    title: "that's my GOAT",
+    message: "okay so i'm not even sure if these messages will appear because idk how to play this game... i can't check the code"
+  }
+};
+
+/* ============================================================
+   Below this line is game logic. Safe to leave alone, but
+   feel free to poke around.
+   ============================================================ */
+
+const DIFFICULTIES = {
+  easy:   { size: 8,  mines: 10 },
+  medium: { size: 10, mines: 16 },
+  hard:   { size: 12, mines: 28 },
+};
+
+const boardEl = document.getElementById('board');
+const mineCounterEl = document.getElementById('mineCounter');
+const resetBtn = document.getElementById('resetBtn');
+const difficultySelect = document.getElementById('difficulty');
+const overlay = document.getElementById('overlay');
+const overlayPhoto = document.getElementById('overlayPhoto');
+const overlayTitle = document.getElementById('overlayTitle');
+const overlayText = document.getElementById('overlayText');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+let SIZE, MINES;
+let grid = [];
+let revealedCount = 0;
+let flagsUsed = 0;
+let gameOver = false;
+let firstClick = true;
+
+function setDifficulty(key){
+  const d = DIFFICULTIES[key];
+  SIZE = d.size;
+  MINES = d.mines;
+}
+
+function buildGrid(){
+  grid = [];
+  for(let r=0;r<SIZE;r++){
+    const row = [];
+    for(let c=0;c<SIZE;c++){
+      row.push({ mine:false, revealed:false, flagged:false, adjacent:0 });
+    }
+    grid.push(row);
+  }
+}
+
+function placeMines(excludeR, excludeC){
+  let placed = 0;
+  while(placed < MINES){
+    const r = Math.floor(Math.random()*SIZE);
+    const c = Math.floor(Math.random()*SIZE);
+    if(grid[r][c].mine) continue;
+    if(Math.abs(r-excludeR)<=1 && Math.abs(c-excludeC)<=1) continue; // safe first click
+    grid[r][c].mine = true;
+    placed++;
+  }
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(grid[r][c].mine) continue;
+      let count = 0;
+      for(let dr=-1;dr<=1;dr++){
+        for(let dc=-1;dc<=1;dc++){
+          if(dr===0 && dc===0) continue;
+          const nr=r+dr, nc=c+dc;
+          if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && grid[nr][nc].mine) count++;
+        }
+      }
+      grid[r][c].adjacent = count;
+    }
+  }
+}
+
+function render(){
+  boardEl.style.gridTemplateColumns = `repeat(${SIZE}, 1fr)`;
+  boardEl.innerHTML = '';
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const cellData = grid[r][c];
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.dataset.r = r;
+      btn.dataset.c = c;
+
+      if(cellData.revealed){
+        btn.classList.add('revealed');
+        if(cellData.mine){
+          btn.classList.add('mine-cell');
+        } else if(cellData.adjacent > 0){
+          btn.innerHTML = `<span class="n${cellData.adjacent}">${cellData.adjacent}</span>`;
+        }
+      } else if(cellData.flagged){
+        btn.classList.add('flag');
+      }
+
+      btn.addEventListener('click', onCellClick);
+      btn.addEventListener('contextmenu', onCellFlag);
+      attachLongPress(btn);
+      boardEl.appendChild(btn);
+    }
+  }
+  mineCounterEl.textContent = String(MINES - flagsUsed).padStart(2,'0');
+}
+
+function attachLongPress(btn){
+  let timer = null;
+  btn.addEventListener('touchstart', (e)=>{
+    timer = setTimeout(()=>{ onCellFlag(e); timer = null; }, 420);
+  }, {passive:true});
+  btn.addEventListener('touchend', ()=>{ if(timer) clearTimeout(timer); });
+  btn.addEventListener('touchmove', ()=>{ if(timer) clearTimeout(timer); });
+}
+
+function onCellClick(e){
+  if(gameOver) return;
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  const cell = grid[r][c];
+  if(cell.flagged || cell.revealed) return;
+
+  if(firstClick){
+    placeMines(r, c);
+    firstClick = false;
+  }
+
+  if(cell.mine){
+    revealAllMines();
+    endGame(false);
+    return;
+  }
+
+  floodReveal(r, c);
+  render();
+  checkWin();
+}
+
+function onCellFlag(e){
+  e.preventDefault();
+  if(gameOver) return;
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  const cell = grid[r][c];
+  if(cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  flagsUsed += cell.flagged ? 1 : -1;
+  render();
+}
+
+function floodReveal(r, c){
+  const stack = [[r,c]];
+  while(stack.length){
+    const [cr, cc] = stack.pop();
+    const cell = grid[cr][cc];
+    if(cell.revealed || cell.flagged) continue;
+    cell.revealed = true;
+    revealedCount++;
+    if(cell.adjacent === 0){
+      for(let dr=-1;dr<=1;dr++){
+        for(let dc=-1;dc<=1;dc++){
+          if(dr===0 && dc===0) continue;
+          const nr=cr+dr, nc=cc+dc;
+          if(nr>=0 && nr<SIZE && nc>=0 && !grid[nr][nc].revealed){
+            stack.push([nr,nc]);
+          }
+        }
+      }
+    }
+  }
+}
+
+function revealAllMines(){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(grid[r][c].mine) grid[r][c].revealed = true;
+    }
+  }
+  render();
+}
+
+function checkWin(){
+  const totalSafe = SIZE*SIZE - MINES;
+  if(revealedCount >= totalSafe){
+    endGame(true);
+  }
+}
+
+function endGame(won){
+  gameOver = true;
+  const diff = difficultySelect.value;
+  if(won){
+    const w = WIN_MESSAGES[diff];
+    overlayPhoto.style.display = 'none';
+    overlayTitle.textContent = w.title;
+    overlayTitle.className = 'overlay-title win';
+    overlayText.textContent = w.message;
+  } else {
+    const l = LOSE_MESSAGES[diff];
+    overlayPhoto.src = LOSE_PHOTOS[diff];
+    overlayPhoto.style.display = 'block';
+    overlayTitle.textContent = l.title;
+    overlayTitle.className = 'overlay-title lose';
+    overlayText.textContent = l.message;
+  }
+  overlay.classList.add('show');
+}
+
+function newGame(){
+  setDifficulty(difficultySelect.value);
+  buildGrid();
+  revealedCount = 0;
+  flagsUsed = 0;
+  gameOver = false;
+  firstClick = true;
+  overlay.classList.remove('show');
+  render();
+}
+
+resetBtn.addEventListener('click', newGame);
+playAgainBtn.addEventListener('click', newGame);
+difficultySelect.addEventListener('change', newGame);
+
+newGame();
+</script>
+</body>
+</html>
